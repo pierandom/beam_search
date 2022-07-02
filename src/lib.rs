@@ -1,7 +1,7 @@
 use numpy::{PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::{prelude::*, types::PySequence};
 
-mod core;
+pub mod core;
 
 #[pyfunction(beam_width="10", topk_paths="1", charset="None")]
 fn decode(

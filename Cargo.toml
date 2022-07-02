@@ -6,10 +6,18 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "beam_search"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 pyo3 = { version = "0.16.5", features = ["extension-module"] }
 numpy = "0.16.2"
 ndarray = "0.15.4"
 crossbeam = "0.8.1"
+
+[dev-dependencies]
+criterion = "0.3"
+ndarray-rand = "0.14.0"
+
+[[bench]]
+name = "beam_search_benchmark"
+harness = false
