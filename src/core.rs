@@ -32,7 +32,7 @@ pub fn decode(
     alphabet: &[String],
     beam_width: usize,
     topk_paths: usize,
-    charset: &Vec<String>,
+    format: &Option<Vec<String>>,
 ) -> Vec<(String, f32)> {
     let mut last: HashMap<Vec<usize>, Beam> = HashMap::new();
     let root_beam = Beam::new();
@@ -67,13 +67,22 @@ pub fn decode(
                 }
             }
 
-            let new_idxs = match charset.get(beam.label.len()) {
-                Some(characters) => {
-                    let new_idxs: Vec<usize> = (0..alphabet.len())
-                        .filter(|&i| characters.contains(&alphabet[i]))
-                        .collect();
-                    new_idxs
-                }
+            let new_idxs = match format {
+                Some(characters_array) => {
+                    match characters_array.get(beam.label.len()) {
+                        Some(characters) => {
+                            let new_idxs: Vec<usize> = (0..alphabet.len())
+                                .filter(|&i| characters.contains(&alphabet[i]))
+                                .collect();
+                            new_idxs
+                        },
+                        // Reached format length. No new characters to add.
+                        None => {
+                            let new_idxs: Vec<usize> = (0..0).collect();
+                            new_idxs
+                        }
+                    }
+                },
                 None => {
                     let new_idxs: Vec<usize> = (0..alphabet.len()).collect();
                     new_idxs
@@ -127,7 +136,7 @@ pub fn decode_batch(
     alphabet: &[String],
     beam_width: usize,
     topk_paths: usize,
-    charset: &Vec<String>,
+    format: &Option<Vec<String>>,
 ) -> Vec<Vec<(String, f32)>> {
     let mut predictions: Vec<Vec<(String, f32)>> = vec![];
     crossbeam::scope(|scope| {
@@ -135,7 +144,7 @@ pub fn decode_batch(
         for example_probs in probs.axis_iter(Axis(0)) {
             handles.push(
                 scope.spawn(move |_| {
-                    decode(example_probs, alphabet, beam_width, topk_paths, charset)
+                    decode(example_probs, alphabet, beam_width, topk_paths, format)
                 }),
             );
         }
@@ -161,13 +170,34 @@ mod tests {
         let alphabet = vec![String::from("A"), String::from("B")];
         let beam_width = 5;
         let topk_paths = 2;
-        let charset: Vec<String> = Vec::new();
-        let predictions = decode(probs.view(), &alphabet, beam_width, topk_paths, &charset);
+        let format: Option<Vec<String>> = None;
+        let predictions = decode(probs.view(), &alphabet, beam_width, topk_paths, &format);
         let beam_1 = predictions.iter().nth(0).unwrap();
         let beam_2 = predictions.iter().nth(1).unwrap();
         assert_eq!(beam_1.0, "A");
         assert!((beam_1.1 - 0.52).abs() < 0.00001);
         assert_eq!(beam_2.0, "");
         assert!((beam_2.1 - 0.48).abs() < 0.00001);
+    }
+
+    #[test]
+    fn test_decode_format() {
+        let probs = array![
+            [0.2, 0.0, 0.8],
+            [0.4, 0.0, 0.6],
+            [0.3, 0.3, 0.4],
+            [0.1, 0.6, 0.3],
+            [0.0, 0.4, 0.6],
+            [0.1, 0.7, 0.2],
+        ];
+        let alphabet = vec![String::from("A"), String::from("B")];
+        let beam_width = 5;
+        let topk_paths = 2;
+        let format: Option<Vec<String>> = Some(vec![String::from("A"), String::from("AB"), String::from("B")]);
+        let predictions = decode(probs.view(), &alphabet, beam_width, topk_paths, &format);
+        let beam_1 = predictions.iter().nth(0).unwrap();
+        let beam_2 = predictions.iter().nth(1).unwrap();
+        assert!(beam_1.0.len() <= 3);
+        assert!(beam_2.0.len() <= 3);
     }
 }

@@ -15,7 +15,7 @@ pub fn decode_benchmark(c: &mut Criterion) {
     ].iter().map(|&c| c.to_string()).collect());
     let beam_width = black_box(10);
     let topk_paths = black_box(5);
-    let charset: Vec<String> = black_box(Vec::new());
+    let charset: Option<Vec<String>> = None;
     c.bench_function(
         "decode 256x37",
         |b| b.iter(
@@ -33,7 +33,7 @@ pub fn decode_batch_benchmark(c: &mut Criterion) {
     ].iter().map(|&c| c.to_string()).collect());
     let beam_width = black_box(10);
     let topk_paths = black_box(5);
-    let charset: Vec<String> = black_box(Vec::new());
+    let charset: Option<Vec<String>> = None;
     c.bench_function(
         "decode_batch 8x256x37",
         |b| b.iter(
